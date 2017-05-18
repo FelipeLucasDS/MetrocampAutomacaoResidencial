@@ -79,7 +79,7 @@ int statusServo = 0;
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(115200, SERIAL_8E1);
   //TODO Inserir função de paridade de serial para a serial de comunicação
   as.begin(4800);
   myservo.attach(servoPin);

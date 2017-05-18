@@ -13,6 +13,35 @@ SoftwareSerial ns(D2, D3);
 
 const int led = 13;
 
+void setup ( void ) {
+  pinMode ( led, OUTPUT );
+  digitalWrite ( led, 0 );
+  pinMode(D2, INPUT);
+  pinMode(D3, OUTPUT);
+  Serial.begin(115200);
+  //TODO Inserir função de paridade de serial para a serial de comunicação
+  ns.begin(4800);
+  WiFi.begin ( ssid, password );
+  Serial.println ( "" );
+  while ( WiFi.status() != WL_CONNECTED ) {
+    delay ( 500 );
+    Serial.print ( "." );
+  }
+  Serial.print ( "Connected to " );
+  Serial.println ( ssid );
+  Serial.print ( "IP address: " );
+  Serial.println ( WiFi.localIP() );
+
+  if ( MDNS.begin ( "esp8266" ) ) {
+    Serial.println ( "MDNS responder started" );
+  }
+
+  server.on ( "/ler", ler );
+  server.on ( "/enviar", enviar);
+  server.begin();
+  Serial.println ( "HTTP server started" );
+}
+
 void ler() {
   ns.print("ler");
   ns.print("\n");
@@ -29,38 +58,6 @@ void enviar() {
   ns.print(str);
   ns.print("\n");
 	server.send ( 200, "text/json", "{success:true}" );
-}
-
-
-void setup ( void ) {
-	pinMode ( led, OUTPUT );
-	digitalWrite ( led, 0 );
-  pinMode(D2, INPUT);
-  pinMode(D3, OUTPUT);
-  Serial.begin(115200);
-  ns.begin(4800);
-  WiFi.begin ( ssid, password );
-	Serial.println ( "" );
-
-	// Wait for connection
-	while ( WiFi.status() != WL_CONNECTED ) {
-		delay ( 500 );
-		Serial.print ( "." );
-	}
-
-	Serial.print ( "Connected to " );
-	Serial.println ( ssid );
-	Serial.print ( "IP address: " );
-	Serial.println ( WiFi.localIP() );
-
-	if ( MDNS.begin ( "esp8266" ) ) {
-		Serial.println ( "MDNS responder started" );
-	}
-
-	server.on ( "/ler", ler );
-	server.on ( "/enviar", enviar);
-	server.begin();
-	Serial.println ( "HTTP server started" );
 }
 
 void loop ( void ) {
