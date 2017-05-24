@@ -10,6 +10,9 @@ SoftwareSerial as(11, 10);
 const int sensorLedGrande = A0;
 const int sensorLedPequeno = A1;
 const int sensorMotores = A2;
+int VQ0;
+int VQ1;
+int VQ2;
 int gastoEnergiaLedGrande;
 int gastoEnergiaLedPequeno;
 int gastoEnergiaLedMotores;
@@ -126,18 +129,22 @@ void setup() {
   pinMode(bledP4, INPUT);
   pinMode(bVentuinha, INPUT);
   pinMode(bServo, INPUT);
+    VQ0 = determineVQ(sensorLedGrande);
+  VQ1 = determineVQ(sensorLedPequeno);
+  VQ2 = determineVQ(sensorMotores);
+
 }
 
 void loop() {
-//  while (as.available() > 0) {
-//    String str = as.readStringUntil('\n');
-//    Serial.println(str);
-//    if (str == "ler") {
-//      enviaTudo();
-//    } else {
-//      analisaJson(str);
-//    }
-//  }
+  while (as.available() > 0) {
+    String str = as.readStringUntil('\n');
+    Serial.println(str);
+    if (str == "ler") {
+      enviaTudo();
+    } else {
+      analisaJson(str);
+    }
+  }
   verificaTemperatura();
   lerSensorVoltagemMotor();
   lerSensorVoltagemLedGrande();
@@ -242,42 +249,74 @@ void verificaTemperatura() {
 
 
 void lerSensorVoltagemMotor() {
-  gastoEnergiaLedMotores += realizarCalculoEMostrarValorSensorVoltagem(sensorMotores) * tensao;
+  gastoEnergiaLedMotores += realizarCalculoEMostrarValorSensorVoltagem(sensorMotores, VQ0);
 }
 
 void lerSensorVoltagemLedGrande() {
-  gastoEnergiaLedPequeno += realizarCalculoEMostrarValorSensorVoltagem(sensorLedGrande) * tensao;
+ gastoEnergiaLedGrande += realizarCalculoEMostrarValorSensorVoltagem(sensorLedGrande, VQ2);
 }
 
 void lerSensorVoltagemLedPequeno() {
-  gastoEnergiaLedGrande += realizarCalculoEMostrarValorSensorVoltagem(sensorLedPequeno) * tensao;
+  gastoEnergiaLedPequeno += realizarCalculoEMostrarValorSensorVoltagem(sensorLedPequeno, VQ1);
 }
 
-int realizarCalculoEMostrarValorSensorVoltagem(int sensor) {
-  for (int i = 100; i > 0; i--) {
-    // le o sensor na pino analogico A0 e ajusta o valor lido ja que a saída do sensor é (1023)vcc/2 para corrente =0
-    sensorValue_aux = (analogRead(sensor) - 510);
-    // somam os quadrados das leituras.
-    valorSensor += pow(sensorValue_aux, 2);
+float realizarCalculoEMostrarValorSensorVoltagem(int sensor, int VQ) {
+//  currentValue = 0;
+//  for (int index = 0; index < 50; index++) {
+//    sensorValue = analogRead(sensor); // le o sensor na pino analogico A0
+//    sensorValue = (sensorValue - 510) * voltsporUnidade; // ajusta o valor lido para volts começando da metada ja que a saída do sensor é vcc/2 para corrente =0
+//    currentValue = currentValue + (sensorValue / 66) * 1000; // a saída do sensor 66 mV por amper
+//  }
+//
+//  currentValue = currentValue / 5000;
+//  // mostra o resultado no terminal
+//  Serial.print("corrente = " );
+//  currentValue = currentValue - ruido;
+//  Serial.print(currentValue, 2);
+//  Serial.print("\n" );
+
+  int current = 0;
+  int sensitivity = 100;//muda para 100 sefor ACS712-20A ou para 66 for ACS712-5A
+  //le 200 vezes
+  for (int i=0; i<200; i++) {
+    current += abs(analogRead(sensor) - VQ);
     delay(1);
   }
-
-  // finaliza o calculo da média quadratica e ajusta o valor lido para volts
-  valorSensor = (sqrt(valorSensor / 100)) * voltsporUnidade;
-  // calcula a corrente considerando a sensibilidade do sernsor (185 mV por amper)
-  valorCorrente = (valorSensor / sensibilidade);
-
-  //tratamento para possivel ruido
-  //O ACS712 para 30 Amperes é projetado para fazer leitura
-  // de valores alto acima de 0.25 Amperes até 30.
-  // por isso é normal ocorrer ruidos de até 0.20A
-  //por isso deve ser tratado
-  if (valorCorrente <= 0.095) {
-    valorCorrente = 0;
-  }
-  valorSensor = 0;
-  return valorCorrente;
+  current = map(current/200, 0, 1023, 0, 5000);
+  float(current)/sensitivity;
+  return readCurrent(sensor, VQ);
+//  Serial.print("Leitura: ");
+//  Serial.print(readCurrent(sensor, VQ),3);
+//  Serial.println(" mA");
 }
+
+
+int determineVQ(int PIN) {
+  Serial.print("Estimando a Media de coeficiente de tensao:");
+  long VQ = 0;
+  //le 1000 amostra para estabilizar o valor
+  for (int i = 0; i < 10000; i++) {
+    VQ += abs(analogRead(PIN));
+    delay(1);
+  }
+  VQ /= 10000;
+  Serial.print(map(VQ, 0, 1023, 0, 5000)); Serial.println(" mV");
+  return int(VQ);
+}
+
+float readCurrent(int PIN, int VQ) {
+  int current = 0;
+  int sensitivity = 100;//muda para 100 sefor ACS712-20A ou para 66 for ACS712-5A
+  //le 200 vezes
+  for (int i = 0; i < 200; i++) {
+    current += abs(analogRead(PIN) - VQ);
+    delay(1);
+  }
+  current = map(current / 200, 0, 1023, 0, 5000);
+  return float(current) / sensitivity;
+}
+
+
 
 void ir() {
   statusServo = 1;
