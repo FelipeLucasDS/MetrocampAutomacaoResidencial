@@ -30,7 +30,7 @@ void setup ( void ) {
   Serial.print ( "Connected to " );
   Serial.println ( ssid );
   Serial.print ( "IP address: " );
-  Serial.println ( WiFi.localIP() );
+  Serial.println ( WiFi.localIP());
 
   if ( MDNS.begin ( "esp8266" ) ) {
     Serial.println ( "MDNS responder started" );
@@ -55,12 +55,16 @@ void ler() {
 
 void enviar() {
   String str = server.arg("plain");
+  Serial.println(str);
   ns.print(str);
   ns.print("\n");
 	server.send ( 200, "text/json", "{success:true}" );
 }
 
 void loop ( void ) {
+//	Serial.print ( "IP address: " );
+//  Serial.println ( WiFi.localIP());
+
 	server.handleClient();
 }
 
