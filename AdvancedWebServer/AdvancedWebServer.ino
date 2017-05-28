@@ -5,9 +5,10 @@
 #include<SoftwareSerial.h>
 #include <ArduinoJson.h>
 
-const char *ssid = "Spartans";
-const char *password = "JuliaLucas";
-
+//const char *ssid = "Spartans";
+//const char *password = "JuliaLucas";
+const char *ssid = "labeng";
+const char *password = "labeng1234";
 ESP8266WebServer server ( 80 );
 SoftwareSerial ns(D2, D3);
 
@@ -18,11 +19,11 @@ void setup ( void ) {
   digitalWrite ( led, 0 );
   pinMode(D2, INPUT);
   pinMode(D3, OUTPUT);
-  Serial.begin(115200);
-  //TODO Inserir função de paridade de serial para a serial de comunicação
   ns.begin(4800);
   WiFi.begin ( ssid, password );
-  Serial.println ( "" );
+  Serial.println ( "Loren ipsum" );
+  Serial.begin(115200);
+  Serial.println ( "Loren ipsum" );
   while ( WiFi.status() != WL_CONNECTED ) {
     delay ( 500 );
     Serial.print ( "." );
@@ -32,7 +33,7 @@ void setup ( void ) {
   Serial.print ( "IP address: " );
   Serial.println ( WiFi.localIP());
 
-  if ( MDNS.begin ( "esp8266" ) ) {
+  if (MDNS.begin("esp8266")){
     Serial.println ( "MDNS responder started" );
   }
 
@@ -43,6 +44,7 @@ void setup ( void ) {
 }
 
 void ler() {
+  Serial.print("ler");
   ns.print("ler");
   ns.print("\n");
   String str = "\n";
@@ -62,9 +64,6 @@ void enviar() {
 }
 
 void loop ( void ) {
-//	Serial.print ( "IP address: " );
-//  Serial.println ( WiFi.localIP());
-
 	server.handleClient();
 }
 

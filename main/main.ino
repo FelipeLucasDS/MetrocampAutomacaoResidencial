@@ -33,11 +33,11 @@ int pos = 0;
 */
 int  ventrada;           // Variável para ler o sinal do pino do Arduino
 float  temperatura; // Variável que recebe o valor convertido para temperatura.
-const int lm35Pin = A7;
+const int lm35Pin = 7;
 /*
   Motor
 */
-const int ventuinhaPin = 3;
+const int ventuinhaPin = 2;
 /*
   leds grandes
 */
@@ -58,19 +58,6 @@ const int ledP3 = 46;
 const int ledP4 = 47;
 const int ledP5 = 52;
 const int ledP6 = 53;
-/*
-  botões
-*/
-const int bledG1 = 20;
-const int bledG2 = 21;
-const int bledG3 = 22;
-const int bledG4 = 23;
-const int bledP1 = 24;
-const int bledP2 = 25;
-const int bledP3 = 26;
-const int bledP4 = 27;
-const int bVentuinha = 28;
-const int bServo = 29;
 /*
   variaveis
 */
@@ -95,12 +82,8 @@ int statusServo = 0;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  //TODO Inserir função de paridade de serial para a serial de comunicação
   as.begin(4800);
   myservo.attach(servoPin);
-
-  pinMode(LED_BUILTIN, OUTPUT);
-
   pinMode(ledG1, OUTPUT);
   pinMode(ledG2, OUTPUT);
   pinMode(ledG3, OUTPUT);
@@ -109,34 +92,30 @@ void setup() {
   pinMode(ledG6, OUTPUT);
   pinMode(ledG7, OUTPUT);
   pinMode(ledG8, OUTPUT);
-
   pinMode(ledP1, OUTPUT);
   pinMode(ledP2, OUTPUT);
   pinMode(ledP3, OUTPUT);
   pinMode(ledP4, OUTPUT);
   pinMode(ledP5, OUTPUT);
   pinMode(ledP6, OUTPUT);
-
   pinMode(ventuinhaPin, OUTPUT);
-
-  pinMode(bledG1, INPUT);
-  pinMode(bledG2, INPUT);
-  pinMode(bledG3, INPUT);
-  pinMode(bledG4, INPUT);
-  pinMode(bledP1, INPUT);
-  pinMode(bledP2, INPUT);
-  pinMode(bledP3, INPUT);
-  pinMode(bledP4, INPUT);
-  pinMode(bVentuinha, INPUT);
-  pinMode(bServo, INPUT);
-    VQ0 = determineVQ(sensorLedGrande);
+  pinMode(lm35Pin, INPUT);
+  VQ0 = determineVQ(sensorLedGrande);
   VQ1 = determineVQ(sensorLedPequeno);
   VQ2 = determineVQ(sensorMotores);
 
 }
 
 void loop() {
-  while (as.available() > 0) {
+  verificaTemperatura();
+  lerSensorVoltagemMotor();
+  lerSensorVoltagemLedGrande();
+  lerSensorVoltagemLedPequeno();
+  if (statusServo == 0) {
+      myservo.write(0);              // tell servo to go to position in variable 'pos'
+  }  
+   while (as.available() > 0) {
+
     String str = as.readStringUntil('\n');
     Serial.println(str);
     if (str == "ler") {
@@ -145,67 +124,9 @@ void loop() {
       analisaJson(str);
     }
   }
-  verificaTemperatura();
-  lerSensorVoltagemMotor();
-  lerSensorVoltagemLedGrande();
-  lerSensorVoltagemLedPequeno();
-  if (statusServo == 0) {
-      myservo.write(0);              // tell servo to go to position in variable 'pos'
-  }
-  delay(400);
+
+  delay(800);
 }
-
-
-
-void verificaSequenciaDeBotoes() {
-  if (digitalRead(bledG1) == HIGH) {
-    ligaLed(ledG1);
-  } else {
-    desligaLed(ledG1);
-  }
-  if (digitalRead(bledG2) == HIGH) {
-    ligaLed(ledG2);
-  } else {
-    desligaLed(ledG2);
-  }
-  if (digitalRead(bledG3) == HIGH) {
-    ligaLed(ledG3);
-  } else {
-    desligaLed(ledG3);
-  }
-  if (digitalRead(bledG4) == HIGH) {
-    ligaLed(ledG4);
-  } else {
-    desligaLed(ledG4);
-  }
-  if (digitalRead(bledP1) == HIGH) {
-    ligaLed(ledP1);
-  } else {
-    desligaLed(ledP1);
-  }
-  if (digitalRead(bledP2) == HIGH) {
-    ligaLed(ledP2);
-  } else {
-    desligaLed(ledP2);
-  }
-  if (digitalRead(bledP3) == HIGH) {
-    ligaLed(ledP3);
-  } else {
-    desligaLed(ledP3);
-  }
-  if (digitalRead(bledP4) == HIGH) {
-    ligaLed(ledP4);
-  } else {
-    desligaLed(ledP4);
-  }
-  if (digitalRead(bVentuinha) == HIGH) {
-    ligarVentuinha();
-  } else {
-    desligarVentuinha();
-  }
-
-}
-
 void ligaDesligaVentuinha() {
   if (statusVentuinha == 1) {
     desligarVentuinha();
@@ -231,16 +152,18 @@ float retornaTemperatura() {
     valorSensor += pow(valorSensorAux, 2);
     delay(1);
   }
-  ventrada = sqrt(ventrada / 100);
-  temperatura = (500 * ventrada) / 1023;
+  valorSensor = sqrt(valorSensor/100);
+  temperatura = (500 * valorSensor) / 1023;
+  Serial.println("Temperatura");
+  Serial.println(temperatura);
   return temperatura;
 }
 
 void verificaTemperatura() {
-  int temperaturaLida = retornaTemperatura();
+  float temperaturaLida = retornaTemperatura();
   Serial.println("Temperatura");
   Serial.println(temperaturaLida);
-  if (retornaTemperatura() > 25) {
+  if (retornaTemperatura() > 15) {
     ligarVentuinha();
   } else {
     desligarVentuinha();
@@ -249,11 +172,14 @@ void verificaTemperatura() {
 
 
 void lerSensorVoltagemMotor() {
-  gastoEnergiaLedMotores += realizarCalculoEMostrarValorSensorVoltagem(sensorMotores, VQ0);
+  gastoEnergiaLedMotores += realizarCalculoEMostrarValorSensorVoltagem(sensorMotores, VQ2);
+  Serial.println("Corrente no motor: ");
+  Serial.println(gastoEnergiaLedMotores, 3);
+  Serial.println(realizarCalculoEMostrarValorSensorVoltagem(sensorMotores, VQ2), 3);
 }
 
 void lerSensorVoltagemLedGrande() {
- gastoEnergiaLedGrande += realizarCalculoEMostrarValorSensorVoltagem(sensorLedGrande, VQ2);
+ gastoEnergiaLedGrande += realizarCalculoEMostrarValorSensorVoltagem(sensorLedGrande, VQ0);
 }
 
 void lerSensorVoltagemLedPequeno() {
@@ -261,22 +187,8 @@ void lerSensorVoltagemLedPequeno() {
 }
 
 float realizarCalculoEMostrarValorSensorVoltagem(int sensor, int VQ) {
-//  currentValue = 0;
-//  for (int index = 0; index < 50; index++) {
-//    sensorValue = analogRead(sensor); // le o sensor na pino analogico A0
-//    sensorValue = (sensorValue - 510) * voltsporUnidade; // ajusta o valor lido para volts começando da metada ja que a saída do sensor é vcc/2 para corrente =0
-//    currentValue = currentValue + (sensorValue / 66) * 1000; // a saída do sensor 66 mV por amper
-//  }
-//
-//  currentValue = currentValue / 5000;
-//  // mostra o resultado no terminal
-//  Serial.print("corrente = " );
-//  currentValue = currentValue - ruido;
-//  Serial.print(currentValue, 2);
-//  Serial.print("\n" );
-
   int current = 0;
-  int sensitivity = 100;//muda para 100 sefor ACS712-20A ou para 66 for ACS712-5A
+  int sensitivity = 66;
   //le 200 vezes
   for (int i=0; i<200; i++) {
     current += abs(analogRead(sensor) - VQ);
@@ -284,10 +196,11 @@ float realizarCalculoEMostrarValorSensorVoltagem(int sensor, int VQ) {
   }
   current = map(current/200, 0, 1023, 0, 5000);
   float(current)/sensitivity;
+
+  Serial.print("Leitura: ");
+  Serial.print(readCurrent(sensor, VQ),3);
+  Serial.println(" mA");
   return readCurrent(sensor, VQ);
-//  Serial.print("Leitura: ");
-//  Serial.print(readCurrent(sensor, VQ),3);
-//  Serial.println(" mA");
 }
 
 
@@ -300,7 +213,8 @@ int determineVQ(int PIN) {
     delay(1);
   }
   VQ /= 10000;
-  Serial.print(map(VQ, 0, 1023, 0, 5000)); Serial.println(" mV");
+  Serial.print(map(VQ, 0, 1023, 0, 5000)); 
+  Serial.println(" mV");
   return int(VQ);
 }
 
